@@ -28,6 +28,7 @@ async function run() {
     await client.connect();
     const db = client.db("wanderlust");
     const destinationCollection = db.collection("destinations");
+    const bookingCollection = db.collection("bookings");
 
     app.get("/destination", async (req, res) => {
       const result = await destinationCollection.find().toArray();
@@ -55,21 +56,40 @@ async function run() {
       const query = {
         _id: new ObjectId(id),
       };
-      const result = await destinationCollection.updateOne(
-         query ,
-        { $set: updateData },
-      );
-      res.send(result)
+      const result = await destinationCollection.updateOne(query, {
+        $set: updateData,
+      });
+      res.send(result);
     });
 
-    app.delete("/destination/:id", async(req, res)=>{
-      const {id}=req.params;
+    app.delete("/destination/:id", async (req, res) => {
+      const { id } = req.params;
       const query = {
-        _id:new ObjectId(id)
-      }
+        _id: new ObjectId(id),
+      };
       const result = await destinationCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
+    app.post("/booking", async (req, res) => {
+      const bookingData = req.body;
+      const result = await bookingCollection.insertOne(bookingData);
+      res.send(result);
+    });
+
+    app.get("/booking/:userId", async (req, res) => {
+      const { userId } = req.params;
+      const result = await bookingCollection.find({ userId: userId }).toArray();
+      res.send(result);
+    });
+
+    app.delete("/booking/:bookingId", async (req, res) => {
+      const { bookingId } = req.params;
+      const query = {
+        _id: new ObjectId(bookingId),
+      };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
