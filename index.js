@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
 dotenv.config();
 const uri = process.env.MONGODB_URI;
 
@@ -23,6 +24,27 @@ app.get("/", async (req, res) => {
   res.send("Server is runnign fine!");
 });
 
+const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+
+const verifyToken = async (req, res, next) => {
+  const authHeaders = req?.headers.authorization;
+  if (!authHeaders) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  const token = authHeaders.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  console.log(token);
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    console.log(payload);
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "Token validation failed" });
+  }
+};
+
 async function run() {
   try {
     await client.connect();
@@ -41,7 +63,9 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/destination/:id", async (req, res) => {
+    // middleWare
+
+    app.get("/destination/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
       const query = {
         _id: new ObjectId(id),
@@ -70,6 +94,7 @@ async function run() {
       const result = await destinationCollection.deleteOne(query);
       res.send(result);
     });
+    // booking system
     app.post("/booking", async (req, res) => {
       const bookingData = req.body;
       const result = await bookingCollection.insertOne(bookingData);
