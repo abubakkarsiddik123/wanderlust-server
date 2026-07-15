@@ -24,7 +24,7 @@ app.get("/", async (req, res) => {
   res.send("Server is runnign fine!");
 });
 
-const JWKS = createRemoteJWKSet(new URL("http://localhost:3000/api/auth/jwks"));
+const JWKS = createRemoteJWKSet(new URL(`${process.env.CLIENT_URL}/api/auth/jwks`));
 
 const verifyToken = async (req, res, next) => {
   const authHeaders = req?.headers.authorization;
@@ -38,7 +38,7 @@ const verifyToken = async (req, res, next) => {
   console.log(token);
   try {
     const { payload } = await jwtVerify(token, JWKS);
-    console.log(payload);
+    // console.log(payload);
     next();
   } catch (error) {
     return res.status(401).json({ message: "Token validation failed" });
@@ -47,7 +47,7 @@ const verifyToken = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db("wanderlust");
     const destinationCollection = db.collection("destinations");
     const bookingCollection = db.collection("bookings");
@@ -63,7 +63,7 @@ async function run() {
       res.send(result);
     });
 
-    // middleWare
+    // middleWare token verify
 
     app.get("/destination/:id", verifyToken, async (req, res) => {
       const { id } = req.params;
@@ -74,7 +74,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/destination/:id", async (req, res) => {
+    app.patch("/destination/:id", verifyToken,async (req, res) => {
       const { id } = req.params;
       const updateData = req.body;
       const query = {
@@ -95,19 +95,19 @@ async function run() {
       res.send(result);
     });
     // booking system
-    app.post("/booking", async (req, res) => {
+    app.post("/booking", verifyToken, async (req, res) => {
       const bookingData = req.body;
       const result = await bookingCollection.insertOne(bookingData);
       res.send(result);
     });
 
-    app.get("/booking/:userId", async (req, res) => {
+    app.get("/booking/:userId", verifyToken, async (req, res) => {
       const { userId } = req.params;
       const result = await bookingCollection.find({ userId: userId }).toArray();
       res.send(result);
     });
 
-    app.delete("/booking/:bookingId", async (req, res) => {
+    app.delete("/booking/:bookingId", verifyToken, async (req, res) => {
       const { bookingId } = req.params;
       const query = {
         _id: new ObjectId(bookingId),
@@ -116,7 +116,7 @@ async function run() {
       res.send(result);
     });
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
     );
